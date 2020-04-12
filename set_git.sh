@@ -6,9 +6,9 @@ git pull
 echo
 
 # Ask the user for login details
-read -p 'Git repository url: ' upstreamVar
-read -p 'Git Username: ' userVar
-read -p 'Git email: ' emailVar
+export upstreamVar='https://github.com/fgottmann/ud_car_nd_P7.git'
+export userVar='fgottmann'
+export emailVar='frieder.gottmann@gmx.net'
 
 echo
 echo Thank you $userVar!, we now have your credentials
@@ -29,3 +29,5 @@ echo
 echo Please verify your credentials:
 echo username: `git config user.name`
 echo email: `git config user.email`
+
+read 'anyKey' tempvar

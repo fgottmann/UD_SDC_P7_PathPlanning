@@ -1,6 +1,9 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#include <fstream>
+#include <iostream>
+#include <vector>
 #include <math.h>
 #include <string>
 #include <vector>
@@ -81,11 +84,24 @@ int NextWaypoint(double x, double y, double theta, const vector<double> &maps_x,
   return closestWaypoint;
 }
 
+double fmod_usr(double in,double div)
+{
+  if (in > 0)
+    return std::fmod(in,div);
+  else
+  {
+    int multpl = -in/div + 1;
+    return in + multpl*div;
+  }
+}
+
 // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
-vector<double> getFrenet(double x, double y, double theta, 
+vector<double> getFrenet(double x, double y, double yaw,
                          const vector<double> &maps_x, 
-                         const vector<double> &maps_y) {
-  int next_wp = NextWaypoint(x,y, theta, maps_x,maps_y);
+                         const vector<double> &maps_y,
+                         const vector<double> &maps_yaw,
+                         const vector<double> &maps_s, const double &s_max) {
+  int next_wp = NextWaypoint(x,y, yaw, maps_x,maps_y);
 
   int prev_wp;
   prev_wp = next_wp-1;
@@ -95,35 +111,23 @@ vector<double> getFrenet(double x, double y, double theta,
 
   double n_x = maps_x[next_wp]-maps_x[prev_wp];
   double n_y = maps_y[next_wp]-maps_y[prev_wp];
+  double dist_total = sqrt(n_x*n_x + n_y*n_y);
+  double inv_dist = 1.0/dist_total;
   double x_x = x - maps_x[prev_wp];
   double x_y = y - maps_y[prev_wp];
 
   // find the projection of x onto n
-  double proj_norm = (x_x*n_x+x_y*n_y)/(n_x*n_x+n_y*n_y);
+  double proj_norm = (x_x*n_x+x_y*n_y)*inv_dist*inv_dist;
+  proj_norm = std::max(0.0,std::min(1.0,proj_norm));
   double proj_x = proj_norm*n_x;
   double proj_y = proj_norm*n_y;
 
-  double frenet_d = distance(x_x,x_y,proj_x,proj_y);
+  double frenet_d = (x_y*n_x - x_x*n_y)*inv_dist;
+  double frenet_yaw = maps_yaw[prev_wp] + proj_norm*(maps_yaw[next_wp]-maps_yaw[prev_wp]);
+  double internal = maps_s[next_wp]-maps_s[prev_wp];
+  double frenet_s = maps_s[prev_wp] + proj_norm*fmod_usr(maps_s[next_wp]-maps_s[prev_wp],s_max);
 
-  //see if d value is positive or negative by comparing it to a center point
-  double center_x = 1000-maps_x[prev_wp];
-  double center_y = 2000-maps_y[prev_wp];
-  double centerToPos = distance(center_x,center_y,x_x,x_y);
-  double centerToRef = distance(center_x,center_y,proj_x,proj_y);
-
-  if (centerToPos <= centerToRef) {
-    frenet_d *= -1;
-  }
-
-  // calculate s value
-  double frenet_s = 0;
-  for (int i = 0; i < prev_wp; ++i) {
-    frenet_s += distance(maps_x[i],maps_y[i],maps_x[i+1],maps_y[i+1]);
-  }
-
-  frenet_s += distance(0,0,proj_x,proj_y);
-
-  return {frenet_s,frenet_d};
+  return {frenet_s,frenet_d,frenet_yaw};
 }
 
 // Transform from Frenet s,d coordinates to Cartesian x,y
@@ -152,6 +156,38 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
   double y = seg_y + d*sin(perp_heading);
 
   return {x,y};
+}
+
+vector<double> interpolate_linear(const vector<double> &x_b, const vector<double> &y_b,
+                                  const vector<double> &x)
+{
+  vector<double> ret;
+
+  for (int ii = 0; ii < x.size();ii++)
+  {
+    int ind0 = 0;
+    while((ind0 < x_b.size() - 3) && x[ii] >= x_b[ind0])
+      ind0++;
+
+    double factor = (x[ii] - x_b[ind0])/std::max(1e-10,x_b[ind0 + 1] - x_b[ind0]);
+    factor = std::min(1.0,std::max(0.0,factor));
+
+    ret.push_back(y_b[ind0] + factor*(y_b[ind0+1]-y_b[ind0]));
+  }
+
+  return ret;
+}
+
+double interpolate_linear(const vector<double> &x_b, const vector<double> &y_b, double x)
+{
+  int ind0 = 1;
+  while((ind0 < x_b.size() - 1) && x > x_b[ind0])
+    ind0++;
+
+  double factor = (x - x_b[ind0-1])/std::max(1e-1,x_b[ind0] - x_b[ind0-1]);
+  factor = std::min(1.0,std::max(0.0,factor));
+
+  return y_b[ind0-1] + factor*(y_b[ind0]-y_b[ind0-1]);
 }
 
 #endif  // HELPERS_H
