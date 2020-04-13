@@ -52,10 +52,12 @@ The main conditions for a lane changes are
 Here are two examples (click the images for the corresponding video):
 
 1. A lane change to the right is conducted as the vehicle ahead of the ego vehicle is slower, the left lane is blocked so we choose the right lane. 
+
 [![Behavior Planning 1](doc/lanechange1.png)](doc/lanechange1.mp4)
 
 
 2. A lane change to the right is conducted as the vehicle ahead of the ego vehicle is slower, the vehicle in the left lane is not driving significantly faster. As the blue vehicle is blocking a lane change to the right for some seconds it takes a short time until the lane change is performed.
+
 [![Behavior Planning 2](doc/lanechange2.png)](doc/lanechange2.mp4)
 
 
