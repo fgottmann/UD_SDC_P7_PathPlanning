@@ -8,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <array>
 #include <cmath>
 
 struct sEgoData
@@ -41,23 +42,28 @@ struct sFusionEgoData
 struct sFusionObjectData
 {
   int id;
-  double s;
-  double d;
-  double v;
-  double LaneID;
+  std::vector<double> s;
+  std::vector<double> d;
+  std::vector<double> v;
+  std::vector<double> LaneID;
 };
 
+//
+// Relevant Car ID:
+// 0     1      2
+// 7    ego     3
+// 6     5      4
 struct sFusionObjectList
 {
-  double t;
+  std::vector<double> t;
   std::vector<sFusionObjectData> ObjectData;
-  int RelevantCarID[3][3];
+  std::array<int, 8> RelevantCarID;
 };
 
 struct sFusionData
 {
   sFusionEgoData egoData;
-  std::vector<sFusionObjectList> ObjectList;
+  sFusionObjectList ObjectList;
   int LaneID[3];
 };
 

@@ -130,9 +130,38 @@ vector<double> getFrenet(double x, double y, double yaw,
   return {frenet_s,frenet_d,frenet_yaw};
 }
 
+//// Transform from Frenet s,d coordinates to Cartesian x,y
+//vector<double> getXY(double s, double d, const vector<double> &maps_s,
+//                     const vector<double> &maps_x,
+//                     const vector<double> &maps_y) {
+//  int prev_wp = -1;
+//
+//  while (s > maps_s[prev_wp+1] && (prev_wp < (int)(maps_s.size()-1))) {
+//    ++prev_wp;
+//  }
+//
+//  int wp2 = (prev_wp+1)%maps_x.size();
+//
+//  double heading = atan2((maps_y[wp2]-maps_y[prev_wp]),
+//                         (maps_x[wp2]-maps_x[prev_wp]));
+//  // the x,y,s along the segment
+//  double seg_s = (s-maps_s[prev_wp]);
+//
+//  double seg_x = maps_x[prev_wp]+seg_s*cos(heading);
+//  double seg_y = maps_y[prev_wp]+seg_s*sin(heading);
+//
+//  double perp_heading = heading-pi()/2;
+//
+//  double x = seg_x + d*cos(perp_heading);
+//  double y = seg_y + d*sin(perp_heading);
+//
+//  return {x,y};
+//}
+
+
 // Transform from Frenet s,d coordinates to Cartesian x,y
-vector<double> getXY(double s, double d, const vector<double> &maps_s, 
-                     const vector<double> &maps_x, 
+vector<double> getXY(double s, double d, const vector<double> &maps_s,
+                     const vector<double> &maps_x,
                      const vector<double> &maps_y) {
   int prev_wp = -1;
 
@@ -140,20 +169,31 @@ vector<double> getXY(double s, double d, const vector<double> &maps_s,
     ++prev_wp;
   }
 
+  int wp3 = (prev_wp+2)%maps_x.size();
   int wp2 = (prev_wp+1)%maps_x.size();
+  int wp0 = (prev_wp-1 + maps_x.size())%maps_x.size();
 
-  double heading = atan2((maps_y[wp2]-maps_y[prev_wp]),
-                         (maps_x[wp2]-maps_x[prev_wp]));
+  double dist = sqrt((maps_x[wp2]-maps_x[prev_wp])*(maps_x[wp2]-maps_x[prev_wp]) + (maps_y[wp2]-maps_y[prev_wp])*(maps_y[wp2]-maps_y[prev_wp]));
+  dist = std::max(1.0e-8,dist);
+  double dist1 = sqrt((maps_x[wp2]-maps_x[wp0])*(maps_x[wp2]-maps_x[wp0]) + (maps_y[wp2]-maps_y[wp0])*(maps_y[wp2]-maps_y[wp0]));
+  dist1 = std::max(1.0e-8,dist1);
+  double dist2 = sqrt((maps_x[wp3]-maps_x[prev_wp])*(maps_x[wp3]-maps_x[prev_wp]) + (maps_y[wp3]-maps_y[prev_wp])*(maps_y[wp3]-maps_y[prev_wp]));
+  dist2 = std::max(1.0e-8,dist2);
+
+  double dx1 = maps_x[wp2]-maps_x[wp0]; dx1 /=  dist1;
+  double dx2 = maps_x[wp3]-maps_x[prev_wp];dx2 /=  dist2;
+  double dy1 = maps_y[wp2]-maps_y[wp0];dy1 /=  dist1;
+  double dy2 = maps_y[wp3]-maps_y[prev_wp];dy2 /=  dist2;
+
   // the x,y,s along the segment
-  double seg_s = (s-maps_s[prev_wp]);
+  double seg_s2 = (s-maps_s[prev_wp])/dist;
+  seg_s2 = std::max(0.0, std::min(1.0,seg_s2));
 
-  double seg_x = maps_x[prev_wp]+seg_s*cos(heading);
-  double seg_y = maps_y[prev_wp]+seg_s*sin(heading);
+  double seg_x = maps_x[prev_wp]+seg_s2*(maps_x[wp2] - maps_x[prev_wp]);
+  double seg_y = maps_y[prev_wp]+seg_s2*(maps_y[wp2] - maps_y[prev_wp]);
 
-  double perp_heading = heading-pi()/2;
-
-  double x = seg_x + d*cos(perp_heading);
-  double y = seg_y + d*sin(perp_heading);
+    double x = seg_x + d*(dy1 + seg_s2*(dy2 - dy1));
+    double y = seg_y - d*(dx1 + seg_s2*(dx2 - dx1));
 
   return {x,y};
 }
